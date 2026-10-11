@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  # Application metrics arrive via OTLP and are re-exposed by the collector.
+  - job_name: otel-collector-app-metrics
+    static_configs:
+      - targets: ["otel-collector:8889"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

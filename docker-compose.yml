@@ -1,0 +1,124 @@
+name: resonance
+
+# Host port plan (container ports are unchanged; services reach each other by name):
+#   5000-5009  UIs opened manually: 5000 Grafana, 5001 feed API, 5002 Prometheus,
+#              5003 web app (reserved), 5004 Argo CD (reserved)
+#   5010+      everything else: 5010/5011 OTLP gRPC/HTTP, 5012 Loki, 5013 Tempo,
+#              5014 Postgres, 5015 Redis
+
+services:
+  feed:
+    build:
+      context: .
+      dockerfile: apps/feed/Dockerfile
+    ports:
+      - "5001:8000"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      LOG_LEVEL: INFO
+    depends_on:
+      - otel-collector
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/healthz').status != 200)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./platform/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "5010:4317"
+      - "5011:4318"
+    depends_on:
+      - tempo
+      - loki
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./platform/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "5002:9090"
+
+  loki:
+    image: grafana/loki:3.2.0
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./platform/observability/loki.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "5012:3100"
+
+  tempo-init:
+    image: grafana/tempo:2.6.1
+    user: root
+    entrypoint: ["chown", "-R", "10001:10001", "/var/tempo"]
+    volumes:
+      - tempo-data:/var/tempo
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - ./platform/observability/tempo.yaml:/etc/tempo/config.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "5013:3200"
+    depends_on:
+      tempo-init:
+        condition: service_completed_successfully
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./platform/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./platform/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "5000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  # Operational stores for Phase 2. Not started by `make up`; use `--profile data`.
+  postgres:
+    profiles: [data]
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: resonance
+      POSTGRES_PASSWORD: resonance-local-only
+      POSTGRES_DB: resonance
+    ports:
+      - "5014:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    profiles: [data]
+    image: redis:7.4-alpine
+    ports:
+      - "5015:6379"
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  postgres-data:
