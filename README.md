@@ -14,7 +14,18 @@ make lint      # ruff + mypy
 make down      # stop everything
 ```
 
-Grafana runs on <http://localhost:3000>, the feed service on <http://localhost:8000/docs>.
+All host ports are in the 5000 range. The first ten are the UIs you open by hand; the rest are
+plumbing.
+
+| Port | Service | |
+|---|---|---|
+| 5000 | Grafana | <http://localhost:5000> |
+| 5001 | Feed API | <http://localhost:5001/docs> |
+| 5002 | Prometheus | <http://localhost:5002> |
+| 5003, 5004 | Web app, Argo CD | reserved |
+| 5010 / 5011 | OTLP gRPC / HTTP | collector |
+| 5012 / 5013 | Loki / Tempo | |
+| 5014 / 5015 | Postgres / Redis | `--profile data` |
 
 ## Layout
 
