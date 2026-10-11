@@ -1,0 +1,34 @@
+[project]
+name = "resonance"
+version = "0.0.0"
+description = "Resonance: conversational, explainable music discovery (workspace root)"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/*"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "httpx>=0.27",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
