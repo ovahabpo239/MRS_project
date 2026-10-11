@@ -1,0 +1,20 @@
+[project]
+name = "feed"
+version = "0.1.0"
+description = "Resonance feed service: candidate retrieval, ranking and re-ranking"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "opentelemetry-api>=1.27",
+  "opentelemetry-sdk>=1.27",
+  "opentelemetry-exporter-otlp-proto-http>=1.27",
+  "opentelemetry-instrumentation-fastapi>=0.48b0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/feed"]
