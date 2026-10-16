@@ -14,3 +14,7 @@ data
 llm
 sim
 **/tests
+**/node_modules
+**/.next
+apps/web/temp
+apps/web/e2e

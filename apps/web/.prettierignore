@@ -1,0 +1,8 @@
+.next
+node_modules
+coverage
+playwright-report
+package-lock.json
+# Rewritten by `next build`/`next dev` in its own style.
+tsconfig.json
+temp

@@ -2,7 +2,7 @@ name: resonance
 
 # Host port plan (container ports are unchanged; services reach each other by name):
 #   5000-5009  UIs opened manually: 5000 Grafana, 5001 feed API, 5002 Prometheus,
-#              5003 web app (reserved), 5004 Argo CD (reserved)
+#              5003 web app (`--profile web`), 5004 Argo CD (reserved)
 #   5010+      everything else: 5010/5011 OTLP gRPC/HTTP, 5012 Loki, 5013 Tempo,
 #              5014 Postgres, 5015 Redis
 
@@ -25,6 +25,22 @@ services:
         - python
         - -c
         - "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/healthz').status != 200)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Projects hub (Next.js). Not started by `make up`; use `make web-up`.
+  web:
+    profiles: [web]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "5003:3000"
+    environment:
+      SITE_URL: http://localhost:5003
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
       timeout: 3s
       retries: 5

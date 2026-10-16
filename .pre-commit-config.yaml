@@ -5,6 +5,14 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: web-prettier
+        name: prettier (apps/web)
+        entry: npm --prefix apps/web exec -- prettier --check
+        language: system
+        files: ^apps/web/.*\.(ts|tsx|mjs|json|css|md)$
+        exclude: ^apps/web/(temp|package-lock\.json)
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.21.2
     hooks:

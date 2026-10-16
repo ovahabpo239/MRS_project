@@ -9,6 +9,15 @@ __pycache__/
 dist/
 build/
 
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
 # Env and secrets
 .env
 .env.*

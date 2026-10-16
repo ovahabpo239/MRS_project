@@ -3,13 +3,17 @@ name = "resonance"
 version = "0.0.0"
 description = "Resonance: conversational, explainable music discovery (workspace root)"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "git-filter-repo>=2.47.0",
+]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
 members = ["apps/*"]
+# apps/web is a Node/Next.js app, not a Python package.
+exclude = ["apps/web"]
 
 [dependency-groups]
 dev = [

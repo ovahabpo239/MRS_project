@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply overflow-x-hidden bg-background font-body-md text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-fixed-dim;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  /* Ambient background */
+  .mesh-gradient {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    translate: var(--mx, 0px) var(--my, 0px);
+    background:
+      radial-gradient(at 0% 0%, rgba(0, 219, 233, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(188, 255, 95, 0.1) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(0, 0, 0, 1) 0px, transparent 100%);
+    animation: bg-drift 20s ease-in-out infinite alternate;
+  }
+
+  .scanline-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image:
+      linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+    background-size:
+      100% 4px,
+      3px 100%;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);
+    border-color: rgba(0, 240, 255, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  .shimmer-btn {
+    background: linear-gradient(90deg, #00dbe9 0%, #dbfcff 50%, #00dbe9 100%);
+    background-size: 200% 100%;
+    animation: shimmer 4s infinite linear;
+  }
+
+  /* Entrance animation (hero) */
+  .animate-hero {
+    opacity: 0;
+    animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .delay-1 {
+    animation-delay: 0.1s;
+  }
+  .delay-2 {
+    animation-delay: 0.2s;
+  }
+  .delay-3 {
+    animation-delay: 0.3s;
+  }
+
+  /* Scroll reveal. Content is visible by default; the Reveal component adds
+     `.reveal-armed` only when JS runs and the block is below the fold. */
+  .reveal {
+    transition:
+      opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.reveal-armed {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  .reveal.reveal-armed.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bg-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Motion is decoration only: switch it all off when the user asks. */
+@media (prefers-reduced-motion: reduce) {
+  .mesh-gradient,
+  .shimmer-btn,
+  .animate-hero {
+    animation: none;
+  }
+  .animate-hero {
+    opacity: 1;
+  }
+  .reveal.reveal-armed {
+    opacity: 1;
+    transform: none;
+  }
+  .glow-hover:hover {
+    transform: none;
+  }
+}

@@ -22,7 +22,8 @@ plumbing.
 | 5000 | Grafana | <http://localhost:5000> |
 | 5001 | Feed API | <http://localhost:5001/docs> |
 | 5002 | Prometheus | <http://localhost:5002> |
-| 5003, 5004 | Web app, Argo CD | reserved |
+| 5003 | Web app | <http://localhost:5003> (`make web-up`) |
+| 5004 | Argo CD | reserved |
 | 5010 / 5011 | OTLP gRPC / HTTP | collector |
 | 5012 / 5013 | Loki / Tempo | |
 | 5014 / 5015 | Postgres / Redis | `--profile data` |
