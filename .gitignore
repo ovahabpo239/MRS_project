@@ -31,6 +31,7 @@ test-results/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+*_override.tf
 crash.log
 
 # Editors and OS
