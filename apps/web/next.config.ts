@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   output: "standalone",
+  // Native addon: load from node_modules at runtime instead of bundling it.
+  serverExternalPackages: ["@node-rs/argon2"],
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {

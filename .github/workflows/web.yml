@@ -24,6 +24,17 @@ jobs:
     defaults:
       run:
         working-directory: apps/web
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: web
+          POSTGRES_PASSWORD: web-ci-only
+          POSTGRES_DB: web_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U web -d web_test" --health-interval 5s
+          --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,6 +47,10 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - run: npm test
+      # Integration tests use the real Postgres service above and apply the SQL migrations.
+      - run: npm run test:int
+        env:
+          DATABASE_URL: postgres://web:web-ci-only@localhost:5432/web_test
       - run: npm run build
       # Dev-only advisories (lint/build tooling) do not ship; fail on runtime dependencies.
       - run: npm audit --omit=dev --audit-level=high

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getCurrentUser } from "@/features/auth";
 import { StatusBadge, getProject, listProjects } from "@/features/projects";
 
 type Params = { slug: string };
@@ -21,6 +22,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 export default async function ProjectPage({ params }: { params: Promise<Params> }) {
   const project = getProject((await params).slug);
   if (!project) notFound();
+
+  // Sign-in implies a confirmed email (login is refused until the address is verified).
+  const signedIn = project.requiresAccount ? Boolean(await getCurrentUser()) : true;
 
   return (
     <article className="mx-auto max-w-3xl px-margin-mobile pb-section-gap pt-40">
@@ -46,14 +50,21 @@ export default async function ProjectPage({ params }: { params: Promise<Params> 
         ))}
       </div>
       <div className="mt-12 flex flex-wrap gap-4">
-        {project.tryUrl ? (
+        {!project.tryUrl ? (
+          <span className="rounded-lg border border-white/10 px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">
+            Not available yet
+          </span>
+        ) : signedIn ? (
           <ButtonLink href={project.tryUrl} variant="shimmer">
             Try it
           </ButtonLink>
         ) : (
-          <span className="rounded-lg border border-white/10 px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">
-            Not available yet
-          </span>
+          <ButtonLink
+            href={`/login?next=${encodeURIComponent(`/projects/${project.slug}`)}`}
+            variant="shimmer"
+          >
+            Sign in to try it
+          </ButtonLink>
         )}
         {project.repoUrl && (
           <ButtonLink href={project.repoUrl} variant="outline">

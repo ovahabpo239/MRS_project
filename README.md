@@ -27,6 +27,8 @@ plumbing.
 | 5010 / 5011 | OTLP gRPC / HTTP | collector |
 | 5012 / 5013 | Loki / Tempo | |
 | 5014 / 5015 | Postgres / Redis | `--profile data` |
+| 5016 / 5017 | Mailpit SMTP / inbox UI | `--profile web`, <http://localhost:5017> |
+| 5018 | Web app database | `--profile web` |
 
 ## Layout
 

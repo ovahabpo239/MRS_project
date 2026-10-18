@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { projects } from "./catalog";
-import { projectSchema } from "./schema";
-import { getProject, projectStats, recentUpdates } from "./service";
+import { projects } from "@/features/projects/catalog";
+import { projectSchema } from "@/features/projects/schema";
+import { getProject, projectStats, recentUpdates } from "@/features/projects/service";
 
 describe("project catalog", () => {
   it("has unique slugs", () => {

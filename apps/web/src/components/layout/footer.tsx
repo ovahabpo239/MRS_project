@@ -1,7 +1,7 @@
 import { siteConfig } from "@/config/site";
 
 const footerLinks = [
-  { label: "Source", href: siteConfig.links.github },
+  { label: "Github", href: siteConfig.links.github },
   ...(siteConfig.links.linkedin ? [{ label: "LinkedIn", href: siteConfig.links.linkedin }] : []),
   ...(siteConfig.links.instagram ? [{ label: "Instagram", href: siteConfig.links.instagram }] : []),
   { label: "Email", href: `mailto:${siteConfig.email}` },

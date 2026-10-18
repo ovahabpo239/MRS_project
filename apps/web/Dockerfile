@@ -26,8 +26,10 @@ RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app -H -s /sbin/nologin a
 COPY --from=build --chown=10001:10001 /app/.next/standalone ./
 COPY --from=build --chown=10001:10001 /app/.next/static ./.next/static
 COPY --from=build --chown=10001:10001 /app/public ./public
+# SQL migrations, applied on startup when RUN_MIGRATIONS=true.
+COPY --from=build --chown=10001:10001 /app/drizzle ./drizzle
 USER 10001:10001
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
-  CMD wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:3000/api/ready || exit 1
 CMD ["node", "server.js"]

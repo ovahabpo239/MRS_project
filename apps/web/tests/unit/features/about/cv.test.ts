@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cv } from "./cv";
+import { cv } from "@/features/about/cv";
 
 describe("cv data", () => {
   it("does not publish a phone number", () => {

@@ -3,7 +3,7 @@ import { Chivo, Geist, JetBrains_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import { AmbientBackground } from "@/components/marketing/ambient-background";
 import { Footer } from "@/components/layout/footer";
-import { Header } from "@/components/layout/header";
+import { SiteHeader } from "@/components/marketing/site-header";
 import { siteConfig } from "@/config/site";
 import { getEnv } from "@/lib/env";
 
@@ -54,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <AmbientBackground />
-        <Header />
+        <SiteHeader />
         <main id="main">{children}</main>
         <Footer />
       </body>

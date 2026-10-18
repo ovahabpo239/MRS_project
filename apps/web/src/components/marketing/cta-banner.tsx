@@ -1,6 +1,5 @@
 import { Reveal } from "./reveal";
 import { ButtonLink } from "@/components/ui/button";
-import { siteConfig } from "@/config/site";
 
 export function CtaBanner() {
   return (
@@ -11,14 +10,15 @@ export function CtaBanner() {
           Ready to try it?
         </h2>
         <p className="mx-auto mb-12 max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
-          Have a look at what is live and what is coming next. The code for everything is open.
+          Create a free account to try the projects as they go live. We only email you to confirm
+          your address.
         </p>
         <div className="flex flex-col justify-center gap-6 md:flex-row">
-          <ButtonLink href="/projects" variant="shimmer" size="lg">
-            See all projects
+          <ButtonLink href="/register" variant="shimmer" size="lg">
+            Create an account
           </ButtonLink>
-          <ButtonLink href={siteConfig.links.github} variant="muted" size="lg">
-            View source
+          <ButtonLink href="/projects" variant="muted" size="lg">
+            See all projects
           </ButtonLink>
         </div>
       </div>
