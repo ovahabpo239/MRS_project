@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+budget_contact_emails = ["you@example.com"]
+
+# monthly_budget    = 30
+# region            = "eu-north-1"
+# github_repository = "ovahabpo239/MRS_project"

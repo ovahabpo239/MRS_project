@@ -2,6 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-10-11
+- **Note:** [ADR-0004](0004-aws-primary-azure-secondary.md) makes AWS the primary cloud. This
+  decision applies to both clouds.
 
 ## Context
 

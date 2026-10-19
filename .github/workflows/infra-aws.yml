@@ -1,0 +1,169 @@
+name: infra-aws
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/aws/**"
+      - "infra/scripts/aws/**"
+      - ".github/workflows/infra-aws.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/terraform/aws/**"
+      - "infra/scripts/aws/**"
+      - ".github/workflows/infra-aws.yml"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do with the dev environment
+        type: choice
+        options: [plan, apply, destroy, nuke]
+        default: plan
+  schedule:
+    # Nightly safety net: nothing ephemeral survives the night unless CLOUD_KEEP_ALIVE is "true".
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+
+# Repository variables come from `terraform output github_variables` in the bootstrap stack. Each
+# job's OIDC subject must be trusted by the CI role there: pull_request (plan), environment:aws
+# (dispatch) or ref:refs/heads/main (nightly nuke).
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform/aws
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15.0"
+      - run: terraform fmt -check -recursive
+      - name: terraform validate
+        run: |
+          for stack in bootstrap envs/dev; do
+            terraform -chdir="$stack" init -backend=false
+            terraform -chdir="$stack" validate
+          done
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - run: tflint --recursive --config "$PWD/.tflint.hcl"
+      - run: shellcheck ../../scripts/aws/*.sh
+
+  plan:
+    needs: check
+    # Fork PRs get no OIDC token, and nothing works before the bootstrap has been applied.
+    if: >-
+      github.event_name == 'pull_request' && vars.AWS_ROLE_ARN != '' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: infra-aws-dev
+      cancel-in-progress: false
+    env:
+      TF_VAR_admin_principal_arns: ${{ vars.AWS_ADMIN_PRINCIPAL_ARNS || '[]' }}
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+    defaults:
+      run:
+        working-directory: infra/terraform/aws/envs/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15.0"
+          terraform_wrapper: false
+      - run: terraform init -backend-config=../../backend.hcl
+      - run: terraform plan -lock-timeout=5m -out=tfplan
+      - name: plan summary
+        run: |
+          {
+            echo '### terraform plan (aws dev)'
+            echo '```'
+            terraform show -no-color tfplan
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - if: env.INFRACOST_API_KEY != ''
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ env.INFRACOST_API_KEY }}
+      - name: cost estimate
+        if: env.INFRACOST_API_KEY != ''
+        run: |
+          terraform show -json tfplan > plan.json
+          {
+            echo '### infracost (aws dev, monthly if left running)'
+            echo '```'
+            infracost breakdown --path plan.json --format table
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.action != 'nuke'
+    runs-on: ubuntu-latest
+    # Protect this environment (required reviewer, main branch only) in the repository settings.
+    environment: aws
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: infra-aws-dev
+      cancel-in-progress: false
+    env:
+      TF_VAR_admin_principal_arns: ${{ vars.AWS_ADMIN_PRINCIPAL_ARNS || '[]' }}
+    defaults:
+      run:
+        working-directory: infra/terraform/aws/envs/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.15.0"
+      - run: terraform init -backend-config=../../backend.hcl
+      - name: terraform ${{ inputs.action }}
+        run: |
+          case "${{ inputs.action }}" in
+            plan) terraform plan -lock-timeout=5m ;;
+            apply) terraform apply -lock-timeout=5m -auto-approve ;;
+            destroy) terraform destroy -lock-timeout=5m -auto-approve ;;
+          esac
+
+  nuke:
+    if: >-
+      vars.AWS_ROLE_ARN != '' && (
+        (github.event_name == 'schedule' && vars.CLOUD_KEEP_ALIVE != 'true') ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'nuke')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: infra-aws-dev
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: infra/scripts/aws/nuke.sh --yes

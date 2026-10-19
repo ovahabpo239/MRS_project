@@ -44,9 +44,9 @@ variable "kubernetes_version" {
 }
 
 variable "system_vm_size" {
-  description = "VM size of the system pool."
+  description = "VM size of the system pool. AKS needs at least 2 vCPU and 4 GiB."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2als_v7"
 }
 
 variable "system_node_count" {
@@ -58,7 +58,7 @@ variable "system_node_count" {
 variable "app_vm_size" {
   description = "VM size of the autoscaled app pool."
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_D2as_v7"
 }
 
 variable "app_min_count" {

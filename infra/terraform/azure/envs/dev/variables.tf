@@ -26,16 +26,19 @@ variable "kubernetes_version" {
   default     = null
 }
 
+# B-series is not allowed for AKS on this subscription (sponsorship offer), so the cheapest
+# allowed 2 vCPU sizes are used: Dalsv7 (4 GiB) for system, Dasv7 (8 GiB) for apps.
+# `az aks create` errors list the allowed sizes when a region or offer changes.
 variable "system_vm_size" {
   description = "VM size of the system pool."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2als_v7"
 }
 
 variable "app_vm_size" {
   description = "VM size of the autoscaled app pool."
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_D2as_v7"
 }
 
 variable "app_max_count" {

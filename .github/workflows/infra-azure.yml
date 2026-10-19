@@ -1,15 +1,17 @@
-name: infra
+name: infra-azure
 
 on:
   pull_request:
     paths:
-      - "infra/**"
-      - ".github/workflows/infra.yml"
+      - "infra/terraform/azure/**"
+      - "infra/scripts/azure/**"
+      - ".github/workflows/infra-azure.yml"
   push:
     branches: [main]
     paths:
-      - "infra/**"
-      - ".github/workflows/infra.yml"
+      - "infra/terraform/azure/**"
+      - "infra/scripts/azure/**"
+      - ".github/workflows/infra-azure.yml"
   workflow_dispatch:
     inputs:
       action:
@@ -41,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: infra/terraform
+        working-directory: infra/terraform/azure
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -59,7 +61,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: tflint --recursive --config "$PWD/.tflint.hcl"
-      - run: shellcheck ../scripts/*.sh
+      - run: shellcheck ../../scripts/azure/*.sh
 
   plan:
     needs: check
@@ -79,7 +81,7 @@ jobs:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     defaults:
       run:
-        working-directory: infra/terraform/envs/dev
+        working-directory: infra/terraform/azure/envs/dev
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -126,7 +128,7 @@ jobs:
       TF_VAR_admin_object_ids: ${{ vars.AZURE_ADMIN_OBJECT_IDS || '[]' }}
     defaults:
       run:
-        working-directory: infra/terraform/envs/dev
+        working-directory: infra/terraform/azure/envs/dev
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -161,4 +163,4 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      - run: infra/scripts/nuke.sh --yes
+      - run: infra/scripts/azure/nuke.sh --yes

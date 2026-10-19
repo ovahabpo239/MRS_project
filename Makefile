@@ -2,7 +2,9 @@
 	cloud-bootstrap cloud-init cloud-plan cloud-up cloud-creds cloud-down cloud-nuke cloud-lint
 
 COMPOSE ?= docker compose
-TF_ROOT := infra/terraform
+CLOUD ?= aws
+CLOUDS := aws azure
+TF_ROOT = infra/terraform/$(CLOUD)
 CLOUD_ENV ?= dev
 TF_ENV = terraform -chdir=$(TF_ROOT)/envs/$(CLOUD_ENV)
 
@@ -60,10 +62,11 @@ web-test:
 web-build:
 	npm --prefix apps/web run build
 
-# Azure (infra/terraform). Requires `az login`. See infra/README.md for the layers.
-# Permanent layer: state account, CI identity, budget. Run once per subscription.
+# Cloud (infra/terraform/$(CLOUD)). AWS by default and needs `aws configure`; CLOUD=azure needs
+# `az login`. See infra/README.md (AWS) and infra/README-azure.md for the layers.
+# Permanent layer: state storage, CI identity, budget. Run once per account or subscription.
 cloud-bootstrap:
-	infra/scripts/bootstrap.sh
+	infra/scripts/$(CLOUD)/bootstrap.sh
 
 cloud-init:
 	$(TF_ENV) init -input=false -reconfigure -backend-config=../../backend.hcl
@@ -74,20 +77,22 @@ cloud-plan: cloud-init
 cloud-up: cloud-init
 	$(TF_ENV) apply
 
-# Needs kubelogin for Entra-only clusters: `az aks install-cli`.
-cloud-creds:
-	az aks get-credentials -g rg-resonance-$(CLOUD_ENV) -n aks-resonance-$(CLOUD_ENV) --overwrite-existing
-	kubelogin convert-kubeconfig -l azurecli
+# Runs the environment's own get_credentials output. Azure also needs kubelogin: `az aks install-cli`.
+cloud-creds: cloud-init
+	eval "$$($(TF_ENV) output -raw get_credentials)"
 
 cloud-down: cloud-init
 	$(TF_ENV) destroy
 
-# Deletes every ephemeral resource group and its state, even if Terraform lost track of it.
+# Deletes every ephemeral resource and its state, even if Terraform lost track of it.
 cloud-nuke:
-	infra/scripts/nuke.sh
+	infra/scripts/$(CLOUD)/nuke.sh
 	@printf "Delete all of the above? [y/N] "; read answer; \
-	if [ "$$answer" = y ]; then infra/scripts/nuke.sh --yes; else echo "Nothing deleted."; fi
+	if [ "$$answer" = y ]; then infra/scripts/$(CLOUD)/nuke.sh --yes; else echo "Nothing deleted."; fi
 
+# Both clouds, whatever CLOUD is set to.
 cloud-lint:
-	terraform fmt -check -recursive $(TF_ROOT)
-	cd $(TF_ROOT) && tflint --init && tflint --recursive --config "$$(pwd)/.tflint.hcl"
+	terraform fmt -check -recursive infra/terraform
+	for cloud in $(CLOUDS); do \
+		(cd infra/terraform/$$cloud && tflint --init && tflint --recursive --config "$$(pwd)/.tflint.hcl") || exit 1; \
+	done

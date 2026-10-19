@@ -43,5 +43,6 @@ plumbing.
 | `sim/` | User behavior simulator and load-test scenarios |
 | `docs/` | Spec, ADRs, runbooks, postmortems |
 
-Architecture decisions are recorded in [docs/adr/](docs/adr/). Azure environments are ephemeral
-(`make cloud-up` / `make cloud-down`); see [infra/README.md](infra/README.md).
+Architecture decisions are recorded in [docs/adr/](docs/adr/). Cloud environments are ephemeral
+(`make cloud-up` / `make cloud-down`) on AWS, the main cloud, or on Azure with `CLOUD=azure`; see
+[infra/README.md](infra/README.md) and [infra/README-azure.md](infra/README-azure.md).

@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-backend="$(cd "$(dirname "$0")/../terraform" && pwd)/backend.hcl"
+backend="$(cd "$(dirname "$0")/../../terraform/azure" && pwd)/backend.hcl"
 
 run() {
   if $apply; then

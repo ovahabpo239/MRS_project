@@ -1,5 +1,5 @@
 # Ephemeral layer: everything that costs money. Built and destroyed every iteration
-# (make cloud-up / cloud-down); infra/scripts/nuke.sh is the safety net if a destroy is skipped.
+# (make cloud-up / cloud-down); infra/scripts/azure/nuke.sh is the safety net if a destroy is skipped.
 
 provider "azurerm" {
   features {

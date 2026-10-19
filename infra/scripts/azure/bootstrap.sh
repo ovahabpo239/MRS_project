@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Applies the permanent layer (infra/terraform/bootstrap).
+# Applies the Azure permanent layer (infra/terraform/azure/bootstrap).
 #
 # The state account is created by this very stack, so the first run cannot use it yet: it applies
-# with a local backend, writes infra/terraform/backend.hcl from the outputs and then migrates the
-# state into the new account. Every later run (backend.hcl present, no local state) is a plain
+# with a local backend, writes infra/terraform/azure/backend.hcl from the outputs and then migrates
+# the state into the new account. Every later run (backend.hcl present, no local state) is a plain
 # init + apply against the remote state.
 set -euo pipefail
 
-root="$(cd "$(dirname "$0")/../terraform" && pwd)"
+root="$(cd "$(dirname "$0")/../../terraform/azure" && pwd)"
 stack="$root/bootstrap"
 backend="$root/backend.hcl"
 override="$stack/backend_override.tf"
@@ -22,7 +22,7 @@ migrate() {
       mv "$local_state" "$local_state.migrated"
       rm -f "$local_state.backup"
       echo
-      echo "Bootstrap state now lives in Azure. Commit infra/terraform/backend.hcl."
+      echo "Bootstrap state now lives in Azure. Commit infra/terraform/azure/backend.hcl."
       echo "GitHub repository variables:"
       tf output github_variables
       return 0

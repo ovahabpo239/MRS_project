@@ -1,10 +1,13 @@
 # Resonance — Conversational, Explainable Music Discovery
 
+> **Main spec (AWS).** The original Azure design is kept as a second deployment target in
+> [spec-azure.md](spec-azure.md) ([ADR-0004](adr/0004-aws-primary-azure-secondary.md)).
+
 | | |
 |---|---|
 | **Type** | Consumer web app, built as a portfolio-grade end-to-end system |
 | **Emphasis** | AI / ML engineering, with real depth in Data, DevOps and Cloud |
-| **Cloud** | Microsoft Azure (about USD 900 of credits) |
+| **Cloud** | Amazon Web Services (Free Tier credit, about USD 100); Microsoft Azure as a second target |
 | **Own hardware** | One GPU server (RTX 5090, 32 GB VRAM), used for training and fine-tuning only, never for serving |
 | **Goal** | Career portfolio that shows production-grade skills across the AI Engineer, ML Engineer, DevOps, Cloud Architect and Data Engineer paths |
 
@@ -14,7 +17,7 @@
 
 Resonance is a music discovery app with two ways to find music. A personalized feed learns from what you listen to. A chat lets you describe a vibe in plain language ("rainy-day jazz that isn't too slow") and returns a playlist where every track comes with a grounded explanation of why it was picked.
 
-Under the hood it is a deliberately complete system: a lakehouse fed by batch and streaming data, a hybrid recommender trained on your own GPU, a fine-tuned small language model, a retrieval-augmented agent that uses tools, and a GitOps-delivered Kubernetes platform on Azure with full observability and cost control.
+Under the hood it is a deliberately complete system: a lakehouse fed by batch and streaming data, a hybrid recommender trained on your own GPU, a fine-tuned small language model, a retrieval-augmented agent that uses tools, and a GitOps-delivered Kubernetes platform on AWS with full observability and cost control.
 
 The app is the excuse. The real deliverable is evidence that you can design, build, operate and evaluate each layer of a modern AI product.
 
@@ -35,7 +38,7 @@ The app is the excuse. The real deliverable is evidence that you can design, bui
 1. Cover all five career paths with non-trivial, justified use of each technology.
 2. Every major technology choice is recorded as an Architecture Decision Record (ADR), including when you would choose differently.
 3. Fully reproducible: one command brings up a local development stack, and Terraform plus GitOps bring up the cloud stack.
-4. Cost-controlled: the whole thing fits inside the Azure credits through scale-to-zero, scheduling and budgets.
+4. Cost-controlled: the whole thing fits inside the AWS credits through scale-to-zero, ephemeral environments, scheduling and budgets.
 5. Measured: offline metrics, online (simulated) experiments, LLM evals and SLOs are published, not assumed.
 
 ### Non-goals
@@ -69,7 +72,7 @@ The structured part of the request (instrumental, era, energy) is extracted by t
 
 ### 3.3 Functional requirements
 
-- FR-1: Authenticate users via OIDC (Microsoft Entra External ID).
+- FR-1: Authenticate users via OIDC (Amazon Cognito user pool).
 - FR-2: Import listening history from a public ListenBrainz profile.
 - FR-3: Serve a personalized feed from a recommender with at least two stages (retrieval, ranking).
 - FR-4: Provide a natural-language search and playlist builder backed by an agent with tools.
@@ -117,10 +120,10 @@ flowchart LR
     WEB["Next.js web app"]
   end
   subgraph Edge
-    FD["Front Door + WAF"]
+    FD["CloudFront + AWS WAF"]
     GW["API gateway"]
   end
-  subgraph Services["AKS: application services"]
+  subgraph Services["EKS: application services"]
     FEED["Feed service"]
     CHAT["Agent service (LangGraph)"]
     CAT["Catalog service"]
@@ -129,9 +132,9 @@ flowchart LR
     MCP["MCP tool servers"]
   end
   subgraph Data["Data platform"]
-    KAF[("Kafka / Event Hubs")]
-    LAKE[("ADLS lakehouse: Delta + Iceberg interop")]
-    DBX["Spark / Databricks + dbt"]
+    KAF[("Kafka / MSK")]
+    LAKE[("S3 lakehouse: Delta + Iceberg interop")]
+    DBX["Spark (EMR Serverless) + dbt"]
     AF["Airflow"]
   end
   subgraph Stores["Operational stores"]
@@ -194,7 +197,7 @@ flowchart LR
 | RAG | Hybrid retrieval (BM25 + dense) with a reranker, on pgvector or Qdrant | Corpus from Wikipedia and MusicBrainz annotations, citations required |
 | Fine-tuned small LLM | QLoRA on 3–8B model (a 14B model is likely feasible on 32 GB) | Natural-language request to structured query filters, plus explanation style |
 | Serving | vLLM on an autoscaled spot GPU pool | Scale to zero when idle |
-| Gateway | LiteLLM with Azure OpenAI fallback | Routing, retries, caching, budgets, per-feature cost tracking |
+| Gateway | LiteLLM with Amazon Bedrock fallback | Routing, retries, caching, budgets, per-feature cost tracking |
 | Structured output | Pydantic schemas, constrained decoding (Outlines or vLLM guided decoding) | No free-text parsing in the hot path |
 | Evaluation | Ragas plus a custom harness, LLM-as-judge calibrated against human labels | Runs in CI on every prompt or model change |
 | Tracing | Langfuse or Phoenix with OpenTelemetry | Prompt versions, token cost, latency |
@@ -226,8 +229,8 @@ flowchart LR
 | Packaging | Helm (and Kustomize overlays) | One chart per service |
 | GitOps | Argo CD | Declarative environments, drift detection |
 | Progressive delivery | Argo Rollouts | Canary with automated analysis against SLO metrics |
-| Autoscaling | KEDA | Includes GPU pool scale-to-zero and Kafka-lag-based scaling |
-| Secrets | External Secrets Operator + Azure Key Vault | No secrets in Git |
+| Autoscaling | KEDA for workloads, Karpenter for nodes | Includes GPU pool scale-to-zero and Kafka-lag-based scaling |
+| Secrets | External Secrets Operator + AWS Secrets Manager | No secrets in Git |
 | Policy | Kyverno | Enforce non-root, resource limits, signed images |
 | Supply chain | Trivy, Syft (SBOM), Cosign, provenance attestations | Verified at admission |
 | Observability | OpenTelemetry to Prometheus, Grafana, Loki, Tempo | One trace from browser to model server |
@@ -240,28 +243,28 @@ flowchart LR
 
 | Capability | Technology | Notes |
 |---|---|---|
-| Landing zone | Azure subscriptions per environment, management groups, Azure Policy | Naming, tagging and allowed-region policies |
-| IaC | Terraform (modules for network, aks, data, security, observability), remote state | Environments via workspaces or directories, drift detection in CI |
-| Compute | AKS with system, app and spot-GPU node pools | Workload identity instead of stored credentials |
-| Edge | Front Door with WAF and CDN | TLS, rate limiting, geo rules |
-| Identity | Microsoft Entra External ID (consumer OIDC), managed identities | |
-| Data | ADLS Gen2, Azure Database for PostgreSQL (flexible), Azure Cache for Redis, Event Hubs (Kafka endpoint) | Private endpoints everywhere |
-| Analytics | Azure Databricks (check that credits cover it) or Spark on AKS | |
-| Network | Hub-and-spoke VNet, private endpoints, NSGs | WireGuard or VPN link to your GPU server |
-| Security | Key Vault, Defender for Cloud, Azure Policy | |
-| FinOps | Budgets and alerts, cost tags, Infracost in pull requests | |
-| Resilience | Backups, a documented RTO and RPO, a tested restore | |
-| Documentation | ADRs, architecture diagrams, a Well-Architected style review | |
+| Landing zone | AWS Organizations with an account per environment, service control policies, tag policies | Naming, tagging and allowed-region policies |
+| IaC | Terraform (modules for network, eks, data, security, observability), remote state in S3 | Environments via directories, drift detection in CI |
+| Compute | EKS with system and app managed node groups, plus a spot GPU pool through Karpenter | EKS Pod Identity instead of stored credentials |
+| Edge | CloudFront with AWS WAF | TLS, rate limiting, geo rules |
+| Identity | Amazon Cognito (consumer OIDC), IAM roles with GitHub OIDC for CI | |
+| Data | S3, Amazon RDS for PostgreSQL, ElastiCache (Valkey), Amazon MSK Serverless (or Strimzi on EKS) | Private subnets and VPC endpoints |
+| Analytics | EMR Serverless for Spark (or Databricks on AWS, if the credit covers it) | |
+| Network | VPC per environment, hub through Transit Gateway or VPC peering, VPC endpoints, security groups | Site-to-Site VPN or WireGuard link to your GPU server |
+| Security | KMS, Secrets Manager, GuardDuty, Security Hub, AWS Config | |
+| FinOps | AWS Budgets and alerts, Cost Anomaly Detection, cost allocation tags, Infracost in pull requests | |
+| Resilience | AWS Backup, a documented RTO and RPO, a tested restore | |
+| Documentation | ADRs, architecture diagrams, an AWS Well-Architected review | |
 
 ### 6.5 Data Engineer
 
 | Capability | Technology | Notes |
 |---|---|---|
-| Storage | ADLS Gen2 with Delta tables (Iceberg readable through interoperability) | Medallion layout |
+| Storage | S3 with Delta tables (Iceberg readable through interoperability) | Medallion layout |
 | Batch processing | Spark (PySpark) | MusicBrainz and ListenBrainz ingestion, feature backfills |
 | Transformation | dbt | Silver to gold marts, tests, docs |
 | Orchestration | Airflow | Dependency-aware DAGs, backfills, SLAs |
-| Streaming | Kafka (Event Hubs Kafka endpoint or Strimzi) with Spark Structured Streaming or Flink | Event to online feature in under 60 s |
+| Streaming | Kafka (MSK Serverless or Strimzi) with Spark Structured Streaming or Flink | Event to online feature in under 60 s |
 | CDC | Debezium from PostgreSQL | Keeps the lake in sync with operational data |
 | Quality | dbt tests, Great Expectations | Contracts on event schemas |
 | Lineage and catalog | OpenLineage, a catalog tool of your choice | Column-level lineage for key marts |
@@ -404,33 +407,40 @@ resonance/
 
 **Operations**: dashboards per service, golden signals, SLO burn-rate alerts, a runbook for each alert, and an on-call style incident log. Game days inject failures (pod kill, latency, dependency outage, bad deploy) and each produces a short postmortem.
 
-### 7.6 Cloud design (Azure)
+### 7.6 Cloud design (AWS)
 
 **Topology**
 
-- Hub-and-spoke network. Spokes per environment. Private endpoints for storage, database, cache, Key Vault and Event Hubs.
-- AKS with three node pools: system, application (autoscaled), spot GPU (scale to zero).
-- Front Door and WAF at the edge, optional API Management as the gateway.
-- Workload identity for pods, with no stored cloud credentials.
-- A secure link (WireGuard or VPN) between the VNet and your GPU server for dataset pulls and artifact pushes.
+- A VPC per environment, joined to a shared hub through Transit Gateway or VPC peering once there is more than one. VPC endpoints (gateway endpoints for S3, interface endpoints where they pay off) for storage, database, cache, Secrets Manager and MSK traffic.
+- EKS with three node groups: system, application (autoscaled), spot GPU (scale to zero through Karpenter).
+- CloudFront and AWS WAF at the edge, an Application Load Balancer (AWS Load Balancer Controller) or optional API Gateway behind it.
+- EKS Pod Identity for pods, with no stored cloud credentials. CI assumes an IAM role through GitHub OIDC.
+- A secure link (Site-to-Site VPN or WireGuard on a small instance) between the VPC and your GPU server for dataset pulls and artifact pushes.
 
-**Security baseline**: least-privilege roles, Defender for Cloud recommendations tracked, Key Vault with rotation, network policies, image signature verification, centralized logs.
+**Security baseline**: least-privilege IAM roles with permissions boundaries, GuardDuty and Security Hub findings tracked, Secrets Manager with KMS and rotation, network policies, image signature verification, centralized logs.
 
-**Resilience**: documented RTO and RPO targets, database backups and a restore drill, infrastructure rebuilt from code in a clean subscription as a test.
+**Resilience**: documented RTO and RPO targets, database backups (AWS Backup) and a restore drill, infrastructure rebuilt from code in a clean account as a test.
 
-**Cost control (important with limited credits)**
+**Cost control (critical: the credit is about USD 100)**
 
 | Tactic | Detail |
 |---|---|
-| Budgets and alerts | Thresholds at 50, 80 and 100 percent of the credit plan |
+| Budgets and alerts | AWS Budgets at 50, 80 and 100 percent, measured before credits so the alerts show credit burn |
+| Ephemeral environments | Everything that costs money is destroyed after each working session ([ADR-0003](adr/0003-ephemeral-cloud-environments.md)) |
 | Scale to zero | GPU node pool and non-critical workloads scale down when idle |
-| Schedules | Dev environment auto-stops overnight and at weekends |
-| Right-sizing | Burstable database tiers, small default node sizes |
-| Batch windows | Spark and Databricks jobs run on schedule, clusters terminate when done |
-| Cost visibility | Tags per component, a cost dashboard, Infracost on every infrastructure PR |
+| Schedules | A nightly job destroys anything left running |
+| Right-sizing | Burstable instance and database classes (t3/t4g), small default node sizes |
+| Network | Public subnets without a NAT gateway in dev; NAT and private subnets only where the design needs them |
+| Batch windows | Spark jobs on EMR Serverless, billed per job, nothing idle |
+| Cost visibility | Cost allocation tags per component, Cost Explorer, Cost Anomaly Detection, Infracost on every infrastructure PR |
 | LLM spend | Per-session cost recorded, hard daily cap in the gateway |
 
-**Practical checks before you start**: confirm that your credits apply to Databricks and to GPU VM sizes, and request GPU quota early because new subscriptions often start with none.
+**Practical checks before you start**
+
+- The EKS control plane is never free: USD 0.10 per hour while the cluster exists (USD 0.60 on extended support, so keep clusters on standard support).
+- GPU instances need a quota increase: "Running On-Demand G and VT instances" and the matching spot quota start at 0 on new accounts, so request them early.
+- Check which AWS plan the account is on. The Free plan limits some services and closes the account after six months unless it is upgraded; upgrading to the Paid plan keeps the remaining credit.
+- Confirm that the credit applies to the services you plan to use (MSK, EMR, Bedrock, GPU instances).
 
 ---
 
@@ -440,7 +450,7 @@ resonance/
 - Data minimization: only public or simulated data, no real personal data collected.
 - Map LLM risks to the OWASP Top 10 for LLM applications (prompt injection, insecure output handling, excessive agency, and so on) and record your mitigations.
 - Dependency and image scanning in CI, signed images, admission policies.
-- Secrets only in Key Vault, rotated, never in Git or images.
+- Secrets only in AWS Secrets Manager, rotated, never in Git or images.
 - Rate limiting and abuse protection at the edge and in the gateway.
 
 ---
@@ -467,7 +477,7 @@ Effort is indicative for one person working part-time. Each phase ends with an e
 
 | Phase | Focus | Key deliverables | Exit criterion |
 |---|---|---|---|
-| 0 | Walking skeleton | Repo, Terraform foundation, AKS, CI/CD, Argo CD, basic observability, one dummy service | A commit reaches the cluster and shows up in dashboards |
+| 0 | Walking skeleton | Repo, Terraform foundation, EKS, CI/CD, Argo CD, basic observability, one dummy service | A commit reaches the cluster and shows up in dashboards |
 | 1 | Batch data platform | Ingestion of MusicBrainz, ListenBrainz and FMA, silver and gold layers, dbt tests, Airflow DAGs | Gold marts rebuild from scratch with passing quality checks |
 | 2 | App and streaming | Catalog, profile and event services, web UI, Kafka, CDC, online features | Click in the UI becomes an online feature in under 60 s |
 | 3 | Recommender v1 | Baselines, two-tower, ranker, registry, serving, A/B framework | Beats baselines offline and is served behind a flag |
@@ -484,16 +494,17 @@ Effort is indicative for one person working part-time. Each phase ends with an e
 
 1. Why a medallion lakehouse, and Delta versus Iceberg.
 2. Why Airflow (and when Dagster would win).
-3. Event Hubs Kafka endpoint versus self-managed Kafka.
+3. MSK Serverless versus self-managed Kafka (Strimzi on EKS).
 4. Two-stage recommender versus a single model.
 5. pgvector versus a dedicated vector database.
 6. Own fine-tuned model plus gateway fallback versus hosted-only.
 7. LangGraph versus a plain state machine.
 8. GitOps with Argo CD versus push-based CD.
-9. AKS node pool design and GPU scale-to-zero.
+9. EKS node group design, Karpenter and GPU scale-to-zero.
 10. Where GPU training lives (own hardware) versus where serving lives (cloud).
 11. Cost-control strategy and its measured results.
-12. Tenant and identity model for consumer authentication.
+12. Identity model for consumer authentication (Cognito).
+13. AWS as the primary cloud with Azure as a second target ([ADR-0004](adr/0004-aws-primary-azure-secondary.md)).
 
 ### 11.2 Artifacts to publish
 
@@ -510,7 +521,7 @@ Effort is indicative for one person working part-time. Each phase ends with an e
 | Risk | Mitigation |
 |---|---|
 | Scope is huge | Build in vertical slices; every phase must work end to end before the next starts |
-| Credits run out | Budgets, scale-to-zero, schedules, a cost review at every phase |
+| Credits run out (likely: about USD 100, and EKS alone is USD 2.40 per day) | Ephemeral environments, budgets measured before credits, scale-to-zero, nightly teardown, a cost review at every phase; the Azure target stays deployable as a fallback |
 | GPU quota or credit limits block cloud GPUs | Request early; fall back to hosted model endpoints behind the gateway |
 | Simulator results mislead | State its assumptions and treat online results as relative, not absolute |
 | Dataset license mistakes | Keep a license register and surface attribution in the app |
@@ -526,7 +537,7 @@ Effort is indicative for one person working part-time. Each phase ends with an e
 - Feature flags with a proper experimentation platform (GrowthBook or Unleash).
 - Multi-region active-passive deployment.
 - An internal developer portal (Backstage) describing all services.
-- A second cloud deployment target to prove portability.
+- A second cloud deployment target to prove portability: started, Azure ([spec-azure.md](spec-azure.md), `infra/terraform/azure/`).
 
 ---
 

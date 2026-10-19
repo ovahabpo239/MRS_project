@@ -2,6 +2,9 @@
 
 - **Status:** accepted
 - **Date:** 2026-10-18
+- **Note:** [ADR-0004](0004-aws-primary-azure-secondary.md) makes AWS the primary cloud. The same
+  layering applies to both clouds; the Azure paths below now live under `infra/terraform/azure/`
+  and `infra/scripts/azure/`.
 
 ## Context
 
