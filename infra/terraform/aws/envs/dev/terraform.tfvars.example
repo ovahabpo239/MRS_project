@@ -7,4 +7,5 @@
 # region               = "eu-north-1"
 # system_instance_type = "t3.medium"
 # app_instance_type    = "t3.medium"
+# app_min_count        = 1   # 0 if you only need the cluster, not the GitOps stack
 # app_max_count        = 2

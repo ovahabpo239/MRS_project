@@ -14,6 +14,14 @@ make lint      # ruff + mypy
 make down      # stop everything
 ```
 
+The same service on Kubernetes, delivered by Argo CD from this repository (needs kind and helm,
+see [platform/README.md](platform/README.md)):
+
+```bash
+make kind-up gitops-up   # local cluster, Argo CD and the root app
+make k8s-ports           # Argo CD :5004, Grafana :5005, feed :5006
+```
+
 All host ports are in the 5000 range. The first ten are the UIs you open by hand; the rest are
 plumbing.
 
@@ -23,7 +31,9 @@ plumbing.
 | 5001 | Feed API | <http://localhost:5001/docs> |
 | 5002 | Prometheus | <http://localhost:5002> |
 | 5003 | Web app | <http://localhost:5003> (`make web-up`) |
-| 5004 | Argo CD | reserved |
+| 5004 | Argo CD | <http://localhost:5004> (`make k8s-ports`) |
+| 5005 | Grafana in the cluster | <http://localhost:5005> (`make k8s-ports`) |
+| 5006 | Feed API in the cluster | <http://localhost:5006/docs> (`make k8s-ports`) |
 | 5010 / 5011 | OTLP gRPC / HTTP | collector |
 | 5012 / 5013 | Loki / Tempo | |
 | 5014 / 5015 | Postgres / Redis | `--profile data` |

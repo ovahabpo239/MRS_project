@@ -73,8 +73,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service_version) (rate(http_server_duration_milliseconds_count{service_name=\"feed\"}[5m]))",
-          "legendFormat": "{{service_version}}"
+          "expr": "sum by (service_version, vcs_ref_head_revision) (rate(http_server_duration_milliseconds_count{service_name=\"feed\"}[5m]))",
+          "legendFormat": "{{service_version}} {{vcs_ref_head_revision}}"
         }
       ]
     },

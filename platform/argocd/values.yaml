@@ -1,0 +1,58 @@
+# Values for the upstream argo-cd chart (version pinned in the Makefile, ARGOCD_CHART_VERSION).
+# Installed by `make gitops-up`; everything after that comes from Git through the root app.
+# Slim on purpose: dev runs on t3.medium nodes, so only the four core components run.
+
+global:
+  domain: localhost:5004
+
+configs:
+  params:
+    # TLS ends at kubectl port-forward on the laptop; no Ingress or load balancer exists.
+    server.insecure: true
+  cm:
+    # Default is 120s plus jitter; shorter makes commit-to-cluster visible faster in a demo.
+    timeout.reconciliation: 60s
+    timeout.reconciliation.jitter: 10s
+    exec.enabled: false
+    statusbadge.enabled: false
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  replicas: 0
+
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+server:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+redis:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

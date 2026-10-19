@@ -1,0 +1,45 @@
+# In-cluster observability, built from the same config files docker compose mounts. The Services
+# below carry the compose service names (otel-collector, prometheus, loki, tempo, grafana), so
+# every hostname inside those files resolves unchanged. Image tags match docker-compose.yml;
+# bump both together. Storage is emptyDir: environments are torn down after every session.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: resonance-observability
+    includeSelectors: false
+
+resources:
+  - k8s/namespace.yaml
+  - k8s/otel-collector.yaml
+  - k8s/prometheus.yaml
+  - k8s/loki.yaml
+  - k8s/tempo.yaml
+  - k8s/grafana.yaml
+
+# The hash suffix kustomize adds to these names rolls the pods whenever a config file changes.
+configMapGenerator:
+  - name: otel-collector-config
+    files:
+      - config.yaml=otel-collector.yaml
+  - name: prometheus-config
+    files:
+      - prometheus.yml
+  - name: loki-config
+    files:
+      - config.yaml=loki.yaml
+  - name: tempo-config
+    files:
+      - config.yaml=tempo.yaml
+  - name: grafana-datasources
+    files:
+      - grafana/provisioning/datasources/datasources.yaml
+  - name: grafana-dashboard-providers
+    files:
+      - grafana/provisioning/dashboards/dashboards.yaml
+  - name: grafana-dashboards
+    files:
+      - grafana/dashboards/feed-red.json

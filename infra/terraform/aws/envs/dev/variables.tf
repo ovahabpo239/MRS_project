@@ -40,6 +40,15 @@ variable "app_instance_type" {
   default     = "t3.medium"
 }
 
+# One system node cannot hold kube-system, Argo CD, the observability stack and the apps (pod
+# limit and memory), so dev starts with one app node. 0 saves about USD 0.04/h when only the
+# cluster itself is needed.
+variable "app_min_count" {
+  description = "Lower bound (and starting size) of the app node group."
+  type        = number
+  default     = 1
+}
+
 variable "app_max_count" {
   description = "Upper bound for the app node group."
   type        = number

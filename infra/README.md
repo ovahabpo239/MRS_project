@@ -18,24 +18,24 @@ The cloud is torn down after every working iteration, so the code is split by li
 | Layer | Path | Lifetime | Holds |
 |---|---|---|---|
 | Permanent | `terraform/aws/bootstrap` | Applied once by hand | S3 state bucket `resonance-tfstate-<account id>`, GitHub Actions OIDC role `resonance-github`, monthly AWS budget |
-| Ephemeral | `terraform/aws/envs/dev` | Created and destroyed every iteration | VPC (2 public subnets, no NAT), EKS `eks-resonance-dev` (system node group of 1, app group 0-2), KMS key and read policy for `resonance/dev/*` secrets |
+| Ephemeral | `terraform/aws/envs/dev` | Created and destroyed every iteration | VPC (2 public subnets, no NAT), EKS `eks-resonance-dev` (system node group of 1, app group 1-2), KMS key and read policy for `resonance/dev/*` secrets |
 
 Everything is tagged `project=resonance`; the bootstrap carries `lifecycle=permanent` and the
 environment `lifecycle=ephemeral`. `terraform/aws/backend.hcl` is written by the first bootstrap
 run and committed: it holds the bucket name, which is not a secret.
 
 **Cost while torn down:** only the state bucket, a few cents per month.
-**Cost while `dev` is up:** about USD 4 per day with the defaults (EKS control plane $0.10/h,
-one t3.medium node, public IPv4 addresses, small gp3 volumes), plus about $0.04/h per app node
-while it is scaled up. With about USD 100 of credit that is roughly 25 working days, so tear down
-at the end of every session.
+**Cost while `dev` is up:** about USD 5 per day with the defaults (EKS control plane $0.10/h,
+two t3.medium nodes at about $0.04/h each, public IPv4 addresses, small gp3 volumes). With about
+USD 100 of credit that is roughly 20 full days, so tear down at the end of every session.
+`app_min_count = 0` drops the app node (about $1 per day) when the GitOps stack is not needed.
 
 ## Prerequisites
 
 - Terraform 1.15+
 - AWS CLI v2 configured (`aws configure`) for an IAM user or role with administrator access;
   `aws sts get-caller-identity` must work
-- `kubectl`
+- `kubectl`, and `helm` for `make gitops-up`
 - Optional: `tflint` for `make cloud-lint`
 
 ## First time per account
@@ -65,17 +65,20 @@ branch `main`), and optionally set:
 
 ```bash
 make cloud-up       # terraform apply of envs/dev (~15 min, mostly the EKS control plane)
-make cloud-creds    # aws eks update-kubeconfig
+make cloud-creds    # aws eks update-kubeconfig, context eks-resonance-dev
 kubectl get nodes
+make gitops-up K8S_ENV=dev   # Argo CD + root app; feed and observability follow from Git
+make k8s-ports K8S_ENV=dev   # Argo CD :5004, Grafana :5005, feed :5006
 # ... work ...
 make cloud-down     # terraform destroy
 ```
 
 Use `CLOUD_ENV=<name>` to target another directory under `terraform/aws/envs/` once one exists.
+The GitOps side is described in [platform/README.md](../platform/README.md).
 
-The app node group starts at 0 nodes. Until Cluster Autoscaler or Karpenter is installed from
-`platform/`, scale it by hand:
-`aws eks update-nodegroup-config --cluster-name eks-resonance-dev --nodegroup-name app --scaling-config desiredSize=1`.
+The app node group starts at one node and does not grow on its own until Cluster Autoscaler or
+Karpenter is installed from `platform/`. To add a node by hand:
+`aws eks update-nodegroup-config --cluster-name eks-resonance-dev --nodegroup-name app --scaling-config desiredSize=2`.
 
 CI equivalent: **Actions > infra-aws > Run workflow**, then choose `plan`, `apply`, `destroy` or
 `nuke`. Pull requests that touch the AWS paths get fmt, validate, tflint, shellcheck and a plan in

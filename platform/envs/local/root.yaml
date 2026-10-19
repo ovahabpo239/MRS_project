@@ -1,0 +1,25 @@
+# Root of the local (kind) environment. Applied once by `make gitops-up ENV=local`; Argo CD
+# then renders platform/argocd/apps with apps.yaml and keeps every child in sync with Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ovahabpo239/MRS_project.git
+    targetRevision: main
+    path: platform/argocd/apps
+    helm:
+      valueFiles:
+        - ../../envs/local/apps.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

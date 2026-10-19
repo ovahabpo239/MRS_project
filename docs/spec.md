@@ -499,7 +499,7 @@ Effort is indicative for one person working part-time. Each phase ends with an e
 5. pgvector versus a dedicated vector database.
 6. Own fine-tuned model plus gateway fallback versus hosted-only.
 7. LangGraph versus a plain state machine.
-8. GitOps with Argo CD versus push-based CD.
+8. GitOps with Argo CD versus push-based CD ([ADR-0005](adr/0005-gitops-delivery.md)).
 9. EKS node group design, Karpenter and GPU scale-to-zero.
 10. Where GPU training lives (own hardware) versus where serving lives (cloud).
 11. Cost-control strategy and its measured results.

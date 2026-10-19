@@ -1,0 +1,37 @@
+# Defaults shared by every environment. Per-environment overrides, including the image tag that
+# CI bumps on every merge to main, live in platform/envs/<env>/feed.yaml.
+
+environment: local
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ovahabpo239/resonance-feed
+  tag: main
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+
+logLevel: INFO
+
+# Traces, metrics and logs go to the collector in the observability namespace
+# (platform/observability). An empty endpoint turns telemetry off.
+otel:
+  endpoint: http://otel-collector.observability:4318
+  metricExportIntervalMs: 10000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+serviceAccount:
+  # Pod Identity associations (EKS) and workload identity (AKS) bind to this account later.
+  annotations: {}
