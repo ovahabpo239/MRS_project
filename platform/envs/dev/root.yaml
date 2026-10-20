@@ -1,5 +1,5 @@
 # Root of the dev environment on EKS. Applied once per `make cloud-up` by
-# `make gitops-up ENV=dev`; Argo CD then renders platform/argocd/apps with apps.yaml and keeps
+# `make gitops-up K8S_ENV=dev`; Argo CD then renders platform/argocd/apps with apps.yaml and keeps
 # every child in sync with Git.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

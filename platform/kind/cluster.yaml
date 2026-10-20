@@ -1,5 +1,5 @@
 # Local Kubernetes for the first GitOps pass (ADR-0002): `make kind-up`, then
-# `make gitops-up ENV=local`. One node is enough; UIs are reached through `make k8s-ports`.
+# `make gitops-up K8S_ENV=local`. One node is enough; UIs are reached through `make k8s-ports`.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: resonance

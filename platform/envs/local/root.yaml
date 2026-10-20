@@ -1,4 +1,4 @@
-# Root of the local (kind) environment. Applied once by `make gitops-up ENV=local`; Argo CD
+# Root of the local (kind) environment. Applied once by `make gitops-up K8S_ENV=local`; Argo CD
 # then renders platform/argocd/apps with apps.yaml and keeps every child in sync with Git.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
