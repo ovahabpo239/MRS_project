@@ -2,7 +2,8 @@ name: resonance
 
 # Host port plan (container ports are unchanged; services reach each other by name):
 #   5000-5009  UIs opened manually: 5000 Grafana, 5001 feed API, 5002 Prometheus,
-#              5003 web app (`--profile web`), 5004 Argo CD (reserved)
+#              5003 web app (`--profile web`); 5004-5006 are kubectl port-forwards to a
+#              cluster (`make k8s-ports`): Argo CD, Grafana, feed
 #   5010+      everything else: 5010/5011 OTLP gRPC/HTTP, 5012 Loki, 5013 Tempo,
 #              5014 Postgres, 5015 Redis, 5016/5017 Mailpit SMTP/UI, 5018 web database
 

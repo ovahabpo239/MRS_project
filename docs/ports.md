@@ -10,7 +10,9 @@ Host ports for the local stack, as defined in [docker-compose.yml](../docker-com
 | 5001 | 8000 | feed API | [localhost:5001/healthz](http://localhost:5001/healthz) | Health probe |
 | 5002 | 9090 | Prometheus | [localhost:5002](http://localhost:5002) | |
 | 5003 | 3000 | web app | [localhost:5003](http://localhost:5003) | `--profile web` / `make web-up` |
-| 5004 | - | Argo CD | - | Reserved, not yet in use |
+| 5004 | 80 (svc) | Argo CD | [localhost:5004](http://localhost:5004) | `make k8s-ports`, kind or EKS; user `admin`, `make argocd-password` |
+| 5005 | 3000 (svc) | Grafana in the cluster | [localhost:5005](http://localhost:5005) | `make k8s-ports` |
+| 5006 | 80 (svc) | feed API in the cluster | [localhost:5006/docs](http://localhost:5006/docs) | `make k8s-ports` |
 
 ## 5010+: everything else
 

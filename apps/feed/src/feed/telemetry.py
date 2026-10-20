@@ -26,12 +26,24 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 _EXCLUDED_URLS = "healthz,readyz"
 
 
+def build_resource(service_name: str, service_version: str) -> Resource:
+    """Service identity, plus the commit the image was built from when GIT_SHA is set.
+
+    The revision is what changes on every deploy, so dashboards can show a commit arriving
+    while the package version stays the same.
+    """
+    attributes = {"service.name": service_name, "service.version": service_version}
+    if revision := os.environ.get("GIT_SHA"):
+        attributes["vcs.ref.head.revision"] = revision
+    return Resource.create(attributes)
+
+
 def setup_telemetry(app: FastAPI, service_name: str, service_version: str) -> bool:
     """Instrument the app. Returns True if exporters were configured."""
     if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         return False
 
-    resource = Resource.create({"service.name": service_name, "service.version": service_version})
+    resource = build_resource(service_name, service_version)
 
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))

@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: feed
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: platform/charts/feed
+    helm:
+      releaseName: feed
+      # Relative to the chart path. CI rewrites image.tag in this file on every merge to main.
+      valueFiles:
+        - ../../envs/{{ include "apps.env" . }}/feed.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: resonance
+  {{- include "apps.syncPolicy" . | nindent 2 }}

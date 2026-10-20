@@ -52,6 +52,7 @@ module "eks" {
   kubernetes_version       = var.kubernetes_version
   system_instance_type     = var.system_instance_type
   app_instance_type        = var.app_instance_type
+  app_min_count            = var.app_min_count
   app_max_count            = var.app_max_count
   admin_principal_arns     = local.admin_principal_arns
   permissions_boundary_arn = local.permissions_boundary_arn

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: feed
+description: Resonance feed service (apps/feed)
+type: application
+# Chart version; the image tag is set per environment in platform/envs/<env>/feed.yaml.
+version: 0.1.0
+appVersion: "0.1.0"

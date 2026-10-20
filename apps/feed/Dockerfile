@@ -20,9 +20,13 @@ FROM python:3.12-slim AS runtime
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 COPY --from=build --chown=10001:10001 /app/.venv /app/.venv
+# Commit the image was built from (CI passes it); exported as a telemetry resource attribute.
+# Declared late so a new commit does not invalidate the cached layers above.
+ARG GIT_SHA=""
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    GIT_SHA=$GIT_SHA
 USER 10001:10001
 EXPOSE 8000
 CMD ["uvicorn", "feed.main:app", "--host", "0.0.0.0", "--port", "8000"]

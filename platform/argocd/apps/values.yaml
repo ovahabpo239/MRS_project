@@ -1,0 +1,6 @@
+# Set by the root Application of each environment (platform/envs/<env>/root.yaml).
+env: ""
+
+repoURL: https://github.com/ovahabpo239/MRS_project.git
+# `make gitops-up REVISION=<branch>` points the whole tree at a branch to try changes before merging.
+targetRevision: main

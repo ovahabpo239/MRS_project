@@ -1,0 +1,9 @@
+# Local Kubernetes for the first GitOps pass (ADR-0002): `make kind-up`, then
+# `make gitops-up K8S_ENV=local`. One node is enough; UIs are reached through `make k8s-ports`.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: resonance
+nodes:
+  - role: control-plane
+    # Default image of kind v0.33.0. Pinned by digest, as the kind release notes recommend.
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

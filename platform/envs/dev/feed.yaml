@@ -1,0 +1,9 @@
+# Feed values for dev on EKS. image.tag is rewritten by CI (.github/workflows/feed.yml) on every
+# merge to main; edit the other keys by hand.
+environment: dev
+image:
+  tag: main
+# Application workloads run on the app node group (infra/terraform/aws/modules/eks). Argo CD
+# and observability have no selector and fill whatever room is left.
+nodeSelector:
+  pool: app
