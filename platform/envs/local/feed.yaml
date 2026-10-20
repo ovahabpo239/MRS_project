@@ -2,4 +2,4 @@
 # (.github/workflows/feed.yml) on every merge to main; edit the other keys by hand.
 environment: local
 image:
-  tag: main
+  tag: sha-cdbe714

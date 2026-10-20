@@ -2,7 +2,7 @@
 # merge to main; edit the other keys by hand.
 environment: dev
 image:
-  tag: main
+  tag: sha-cdbe714
 # Application workloads run on the app node group (infra/terraform/aws/modules/eks). Argo CD
 # and observability have no selector and fill whatever room is left.
 nodeSelector:
