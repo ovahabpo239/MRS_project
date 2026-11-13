@@ -35,6 +35,13 @@ function firstErrors(error: z.ZodError): Partial<Record<FieldName, string>> {
   return first;
 }
 
+function invalid(error: z.ZodError, message: string, email?: string): FormState {
+  return { status: "error", message, fieldErrors: firstErrors(error), email };
+}
+
+const FIX_FIELDS = "Please fix the highlighted fields.";
+const BAD_EMAIL = "Enter a valid email address.";
+
 /**
  * Client address for rate limiting. Only meaningful behind a reverse proxy that overwrites
  * X-Forwarded-For; without one the IP limit is skipped and per-email limits still apply.
@@ -45,19 +52,9 @@ async function clientIp(): Promise<string | undefined> {
 }
 
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const parsed = registerSchema.safeParse({
-    email: text(formData, "email"),
-    password: text(formData, "password"),
-  });
   const email = text(formData, "email").trim();
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: "Please fix the highlighted fields.",
-      fieldErrors: firstErrors(parsed.error),
-      email,
-    };
-  }
+  const parsed = registerSchema.safeParse({ email, password: text(formData, "password") });
+  if (!parsed.success) return invalid(parsed.error, FIX_FIELDS, email);
 
   const result = await auth.register(parsed.data, { ip: await clientIp() });
   if (!result.ok) return { status: "error", message: RATE_LIMITED, email };
@@ -67,14 +64,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = text(formData, "email").trim();
   const parsed = loginSchema.safeParse({ email, password: text(formData, "password") });
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: "Please fix the highlighted fields.",
-      fieldErrors: firstErrors(parsed.error),
-      email,
-    };
-  }
+  if (!parsed.success) return invalid(parsed.error, FIX_FIELDS, email);
 
   const result = await auth.login(parsed.data, { ip: await clientIp() });
   if (!result.ok) {
@@ -119,13 +109,7 @@ export async function resendVerificationAction(
   formData: FormData,
 ): Promise<FormState> {
   const parsed = resendSchema.safeParse({ email: text(formData, "email") });
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: "Enter a valid email address.",
-      fieldErrors: firstErrors(parsed.error),
-    };
-  }
+  if (!parsed.success) return invalid(parsed.error, BAD_EMAIL);
   const result = await auth.resendVerification(parsed.data.email);
   if (!result.ok) return { status: "error", message: RATE_LIMITED, email: parsed.data.email };
   return { status: "success", email: parsed.data.email };
@@ -137,14 +121,7 @@ export async function forgotPasswordAction(
 ): Promise<FormState> {
   const email = text(formData, "email").trim();
   const parsed = forgotPasswordSchema.safeParse({ email });
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: "Enter a valid email address.",
-      fieldErrors: firstErrors(parsed.error),
-      email,
-    };
-  }
+  if (!parsed.success) return invalid(parsed.error, BAD_EMAIL, email);
 
   const result = await auth.requestPasswordReset(parsed.data.email, { ip: await clientIp() });
   if (!result.ok) return { status: "error", message: RATE_LIMITED, email };
@@ -164,7 +141,7 @@ export async function resetPasswordAction(
   if (!parsed.success) {
     const fieldErrors = firstErrors(parsed.error);
     return Object.keys(fieldErrors).length > 0
-      ? { status: "error", message: "Please fix the highlighted fields.", fieldErrors }
+      ? { status: "error", message: FIX_FIELDS, fieldErrors }
       : { status: "error", message: "This reset link is not valid." };
   }
 

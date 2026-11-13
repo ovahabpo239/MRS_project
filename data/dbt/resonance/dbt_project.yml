@@ -1,0 +1,12 @@
+name: resonance
+version: "0.1.0"
+profile: resonance
+
+model-paths: ["models"]
+
+models:
+  resonance:
+    +materialized: table
+    +file_format: delta
+    # Every gold table is a Delta table under s3a://<bucket>/gold/
+    +location_root: "s3a://{{ env_var('LAKE_BUCKET', 'lake') }}/gold"

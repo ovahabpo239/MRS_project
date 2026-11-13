@@ -1,6 +1,7 @@
 .PHONY: up down test lint fmt openapi logs web-dev web-deps web-up web-migrate web-lint web-test web-test-int web-build \
 	cloud-bootstrap cloud-init cloud-plan cloud-up cloud-creds cloud-down cloud-nuke cloud-lint \
-	kind-up kind-down kind-load-feed gitops-up k8s-ports argocd-password platform-lint
+	kind-up kind-down kind-load-feed gitops-up k8s-ports argocd-password platform-lint \
+	lake-up lake-down lake-reset data-build data-smoke data-dbt data-lint data-test data-fma-bronze
 
 COMPOSE ?= docker compose
 CLOUD ?= aws
@@ -33,7 +34,7 @@ fmt:
 openapi:
 	uv run python -m feed.export_openapi apps/feed/openapi.json
 
-# Web app (apps/web). Requires Node 22 and `npm ci` in apps/web for the non-Docker targets.
+# Web app (apps/web). Requires Node 24 and `npm ci` in apps/web for the non-Docker targets.
 web-dev: web-deps
 	npm --prefix apps/web run dev
 
@@ -62,6 +63,50 @@ web-test:
 
 web-build:
 	npm --prefix apps/web run build
+
+# Data platform (data/). The lake is a local S3 (RustFS, console on :5020); Spark, Delta and dbt
+# run in the `data` image, because the host has no Java. See data/README.md.
+LAKE = $(COMPOSE) --profile lake
+DATA_RUN = $(LAKE) run --rm
+
+lake-up:
+	$(LAKE) up -d --wait lake
+	$(LAKE) run --rm lake-init
+
+lake-down:
+	$(LAKE) stop lake
+
+# Deletes the lake and the metastore. Only these two volumes: `down -v` would also take the web
+# database and Grafana data with it.
+lake-reset:
+	$(LAKE) rm -sf lake lake-init data
+	docker volume rm -f resonance_lake-data resonance_spark-metastore
+
+data-build:
+	$(LAKE) build data
+
+# Spark writes a Delta table to the lake and reads it back through the metastore.
+data-smoke: lake-up
+	$(DATA_RUN) data smoke
+
+# Any dbt command in the Spark session, e.g. `make data-dbt ARGS="build"`.
+data-dbt: lake-up
+	$(DATA_RUN) data dbt $(ARGS)
+
+data-lint:
+	$(DATA_RUN) --no-deps --entrypoint ruff data check .
+	$(DATA_RUN) --no-deps --entrypoint ruff data format --check .
+	$(DATA_RUN) --no-deps --entrypoint mypy data src tests
+
+# Includes the landing test, which needs the lake (it is skipped when the lake is not running).
+data-test: lake-up
+	$(DATA_RUN) --entrypoint python data -m pytest
+
+# Download the real FMA metadata (342 MiB, SHA-1 verified), land it, then load bronze.
+# Use SOURCE=<zip or url> SHA1=none to run on another archive, e.g. a `fma sample` file.
+data-fma-bronze: lake-up
+	$(DATA_RUN) data fma download $(if $(SOURCE),--source $(SOURCE)) $(if $(SHA1),--sha1 $(SHA1))
+	$(DATA_RUN) data fma bronze
 
 # Cloud (infra/terraform/$(CLOUD)). AWS by default and needs `aws configure`; CLOUD=azure needs
 # `az login`. See infra/README.md (AWS) and infra/README-azure.md for the layers.
