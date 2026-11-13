@@ -26,23 +26,30 @@ import type { LoginInput, RegisterInput } from "./schemas";
 export const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
-const LIMITS = {
-  registerPerIp: { limit: 10, windowSeconds: 3600 },
-  registerPerEmail: { limit: 3, windowSeconds: 3600 },
-  loginPerIp: { limit: 30, windowSeconds: 900 },
-  loginPerEmail: { limit: 10, windowSeconds: 900 },
-  resendPerEmail: { limit: 3, windowSeconds: 3600 },
-  forgotPasswordPerEmail: { limit: 3, windowSeconds: 3600 },
-  forgotPasswordPerIp: { limit: 10, windowSeconds: 3600 },
-} satisfies Record<string, RateLimit>;
+// Per-email limits also stop the forms being used to flood someone's inbox.
+const LIMITS: Record<
+  "register" | "login" | "resend" | "forgot",
+  { email: RateLimit; ip?: RateLimit }
+> = {
+  register: { email: { limit: 3, windowSeconds: 3600 }, ip: { limit: 10, windowSeconds: 3600 } },
+  login: { email: { limit: 10, windowSeconds: 900 }, ip: { limit: 30, windowSeconds: 900 } },
+  resend: { email: { limit: 3, windowSeconds: 3600 } },
+  forgot: { email: { limit: 3, windowSeconds: 3600 }, ip: { limit: 10, windowSeconds: 3600 } },
+};
 
 /** `ip` is undefined when it cannot be determined; IP limits are skipped then, email limits remain. */
 export type RequestContext = { ip?: string };
 
-async function withinLimits(checks: [key: string, limit: RateLimit][]): Promise<boolean> {
+async function withinLimits(
+  action: keyof typeof LIMITS,
+  email: string,
+  ip?: string,
+): Promise<boolean> {
+  const limits = LIMITS[action];
+  const checks = [consume(`${action}:email:${email}`, limits.email)];
+  if (ip && limits.ip) checks.push(consume(`${action}:ip:${ip}`, limits.ip));
   // Evaluate all, so every attempt is counted even if an earlier check already failed.
-  const results = await Promise.all(checks.map(([key, limit]) => consume(key, limit)));
-  return results.every(Boolean);
+  return (await Promise.all(checks)).every(Boolean);
 }
 
 function url(path: string): string {
@@ -78,12 +85,7 @@ export async function register(
   input: RegisterInput,
   ctx: RequestContext = {},
 ): Promise<Result<void, "rate_limited">> {
-  // The per-email limit stops the form being used to flood someone's inbox.
-  const checks: [string, RateLimit][] = [
-    [`register:email:${input.email}`, LIMITS.registerPerEmail],
-  ];
-  if (ctx.ip) checks.push([`register:ip:${ctx.ip}`, LIMITS.registerPerIp]);
-  if (!(await withinLimits(checks))) return err("rate_limited");
+  if (!(await withinLimits("register", input.email, ctx.ip))) return err("rate_limited");
 
   // Hash before looking the user up so both paths take the same time.
   const passwordHash = await hashPassword(input.password);
@@ -110,9 +112,7 @@ export async function login(
   input: LoginInput,
   ctx: RequestContext = {},
 ): Promise<Result<{ userId: string }, LoginError>> {
-  const checks: [string, RateLimit][] = [[`login:email:${input.email}`, LIMITS.loginPerEmail]];
-  if (ctx.ip) checks.push([`login:ip:${ctx.ip}`, LIMITS.loginPerIp]);
-  if (!(await withinLimits(checks))) return err("rate_limited");
+  if (!(await withinLimits("login", input.email, ctx.ip))) return err("rate_limited");
 
   const user = await findUserByEmail(input.email);
   if (!user) {
@@ -138,7 +138,7 @@ export async function verifyEmail(token: string): Promise<Result<void, "invalid_
 
 /** Re-send the confirmation link. Same response whether or not the account exists. */
 export async function resendVerification(email: string): Promise<Result<void, "rate_limited">> {
-  if (!(await consume(`resend:email:${email}`, LIMITS.resendPerEmail))) return err("rate_limited");
+  if (!(await withinLimits("resend", email))) return err("rate_limited");
   const user = await findUserByEmail(email);
   if (user && !user.emailVerifiedAt) await safely(() => issueVerification(user.id, user.email));
   return ok(undefined);
@@ -153,9 +153,7 @@ export async function requestPasswordReset(
   email: string,
   ctx: RequestContext = {},
 ): Promise<Result<void, "rate_limited">> {
-  const checks: [string, RateLimit][] = [[`forgot:email:${email}`, LIMITS.forgotPasswordPerEmail]];
-  if (ctx.ip) checks.push([`forgot:ip:${ctx.ip}`, LIMITS.forgotPasswordPerIp]);
-  if (!(await withinLimits(checks))) return err("rate_limited");
+  if (!(await withinLimits("forgot", email, ctx.ip))) return err("rate_limited");
 
   const user = await findUserByEmail(email);
   if (user) {

@@ -5,7 +5,8 @@ name: resonance
 #              5003 web app (`--profile web`); 5004-5006 are kubectl port-forwards to a
 #              cluster (`make k8s-ports`): Argo CD, Grafana, feed
 #   5010+      everything else: 5010/5011 OTLP gRPC/HTTP, 5012 Loki, 5013 Tempo,
-#              5014 Postgres, 5015 Redis, 5016/5017 Mailpit SMTP/UI, 5018 web database
+#              5014 Postgres, 5015 Redis, 5016/5017 Mailpit SMTP/UI, 5018 web database,
+#              5019/5020 lake S3 API/console (`--profile lake`)
 
 services:
   feed:
@@ -169,7 +170,67 @@ services:
     ports:
       - "5015:6379"
 
+  # Local S3 for the lakehouse (bronze/silver/gold Delta tables). Same s3a:// paths as AWS, only
+  # the endpoint differs. Not started by `make up`; use `make lake-up`. RustFS replaces MinIO,
+  # which no longer publishes container images (ADR-0006).
+  lake:
+    profiles: [lake]
+    image: rustfs/rustfs:1.0.3
+    environment:
+      RUSTFS_ACCESS_KEY: resonance
+      RUSTFS_SECRET_KEY: resonance-local-only
+    ports:
+      - "5019:9000"
+      - "5020:9001"
+    volumes:
+      - lake-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Creates the `lake` bucket (idempotent) and exits.
+  lake-init:
+    profiles: [lake]
+    image: amazon/aws-cli:2.38.2
+    environment:
+      AWS_ACCESS_KEY_ID: resonance
+      AWS_SECRET_ACCESS_KEY: resonance-local-only
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        aws --endpoint-url http://lake:9000 s3api head-bucket --bucket lake 2>/dev/null ||
+        aws --endpoint-url http://lake:9000 s3api create-bucket --bucket lake
+    depends_on:
+      lake:
+        condition: service_healthy
+    restart: "no"
+
+  # Spark + Delta + dbt (data/). One-off jobs only, run with `make data-*`; not a long-running service.
+  data:
+    profiles: [lake]
+    build:
+      context: data
+    environment:
+      S3_ENDPOINT: http://lake:9000
+      AWS_ACCESS_KEY_ID: resonance
+      AWS_SECRET_ACCESS_KEY: resonance-local-only
+      AWS_REGION: us-east-1
+      LAKE_BUCKET: lake
+      SPARK_DRIVER_MEMORY: 3g
+      SPARK_METASTORE_DIR: /var/metastore
+    volumes:
+      - spark-metastore:/var/metastore
+      - ./data:/app
+    depends_on:
+      lake-init:
+        condition: service_completed_successfully
+
 volumes:
+  lake-data:
+  spark-metastore:
   web-db-data:
   prometheus-data:
   loki-data:

@@ -39,6 +39,7 @@ plumbing.
 | 5014 / 5015 | Postgres / Redis | `--profile data` |
 | 5016 / 5017 | Mailpit SMTP / inbox UI | `--profile web`, <http://localhost:5017> |
 | 5018 | Web app database | `--profile web` |
+| 5019 / 5020 | Lake S3 API / console | `--profile lake` (`make lake-up`), <http://localhost:5020> |
 
 ## Layout
 

@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: scratch
+    schema: scratch
+    tables:
+      - name: smoke

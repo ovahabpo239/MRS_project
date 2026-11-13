@@ -28,7 +28,7 @@ export function Hero() {
             <ButtonLink href="/projects" variant="solid">
               Browse projects
             </ButtonLink>
-            <ButtonLink href={siteConfig.links.github} variant="outline">
+            <ButtonLink href={siteConfig.github} variant="outline">
               View GitHub
             </ButtonLink>
           </div>
