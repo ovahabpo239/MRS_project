@@ -9,17 +9,21 @@ import {
   type User,
 } from "@/server/db/schema";
 
-/** Replace any outstanding reset token for the user, so only the newest link works. */
-export async function replacePasswordResetToken(
+/** Replace any outstanding token for the user, so only the newest link works. */
+async function replaceToken(
+  table: typeof emailVerificationTokens | typeof passwordResetTokens,
   userId: string,
   tokenHash: string,
   expiresAt: Date,
 ): Promise<void> {
   await getDb().transaction(async (tx) => {
-    await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
-    await tx.insert(passwordResetTokens).values({ userId, tokenHash, expiresAt });
+    await tx.delete(table).where(eq(table.userId, userId));
+    await tx.insert(table).values({ userId, tokenHash, expiresAt });
   });
 }
+
+export const replaceVerificationToken = replaceToken.bind(null, emailVerificationTokens);
+export const replacePasswordResetToken = replaceToken.bind(null, passwordResetTokens);
 
 /**
  * Redeem a reset token and set the new password, all in one transaction: the token is consumed
@@ -75,18 +79,6 @@ export async function insertUser(email: string, passwordHash: string): Promise<U
 
 export async function markEmailVerified(userId: string): Promise<void> {
   await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
-}
-
-/** Replace any outstanding token for the user, so only the newest link works. */
-export async function replaceVerificationToken(
-  userId: string,
-  tokenHash: string,
-  expiresAt: Date,
-): Promise<void> {
-  await getDb().transaction(async (tx) => {
-    await tx.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
-    await tx.insert(emailVerificationTokens).values({ userId, tokenHash, expiresAt });
-  });
 }
 
 /**

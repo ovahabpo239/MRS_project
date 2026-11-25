@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/cn";
 import type { ProjectStatus } from "../schema";
 
 const labels: Record<ProjectStatus, string> = { live: "Live", beta: "Beta", soon: "Coming soon" };
@@ -10,5 +9,5 @@ const tones: Record<ProjectStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: ProjectStatus }) {
-  return <Badge className={cn(tones[status])}>{labels[status]}</Badge>;
+  return <Badge className={tones[status]}>{labels[status]}</Badge>;
 }

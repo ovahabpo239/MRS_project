@@ -44,3 +44,7 @@ crash.log
 /data/.cache/
 *.parquet
 mlruns/
+# dbt build output
+/data/dbt/**/target/
+/data/dbt/**/logs/
+/data/dbt/**/dbt_packages/

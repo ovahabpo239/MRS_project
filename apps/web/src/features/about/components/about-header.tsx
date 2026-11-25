@@ -4,7 +4,6 @@ import { siteConfig } from "@/config/site";
 import { cv } from "../cv";
 
 export function AboutHeader({ cvHref }: { cvHref?: string }) {
-  const { links } = siteConfig;
   return (
     <header className="space-y-8">
       <div className="space-y-3">
@@ -30,19 +29,11 @@ export function AboutHeader({ cvHref }: { cvHref?: string }) {
           <Mail className="size-4" aria-hidden="true" />
           Email me
         </ButtonLink>
-        <ButtonLink href={links.github} variant="outline">
-          GitHub
-        </ButtonLink>
-        {links.linkedin && (
-          <ButtonLink href={links.linkedin} variant="outline">
-            LinkedIn
+        {siteConfig.social.map((link) => (
+          <ButtonLink key={link.label} href={link.href} variant="outline">
+            {link.label}
           </ButtonLink>
-        )}
-        {links.instagram && (
-          <ButtonLink href={links.instagram} variant="outline">
-            Instagram
-          </ButtonLink>
-        )}
+        ))}
       </div>
     </header>
   );

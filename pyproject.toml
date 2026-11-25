@@ -12,8 +12,9 @@ package = false
 
 [tool.uv.workspace]
 members = ["apps/*"]
-# apps/web is a Node/Next.js app, not a Python package.
-exclude = ["apps/web"]
+# apps/web is a Node/Next.js app, not a Python package. data/ is its own uv project (Spark and
+# dbt are too heavy for the feed CI).
+exclude = ["apps/web", "data"]
 
 [dependency-groups]
 dev = [

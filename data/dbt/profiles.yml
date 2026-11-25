@@ -1,0 +1,11 @@
+# dbt runs inside the Spark session that resonance_data.spark.get_spark configures
+# (`python -m resonance_data dbt ...`), so there is no Thrift server to run.
+resonance:
+  target: lake
+  outputs:
+    lake:
+      type: spark
+      method: session
+      schema: gold
+      host: NA # unused by the session method, but required by dbt-core
+      threads: 1 # one Derby metastore connection

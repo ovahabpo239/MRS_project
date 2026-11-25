@@ -20,59 +20,37 @@ export const users = pgTable(
   (table) => [uniqueIndex("users_email_key").on(table.email)],
 );
 
-/** Random session token, stored only as a SHA-256 hash so a DB leak cannot be replayed. */
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull(),
-    expiresAt: timestamptz("expires_at").notNull(),
-    createdAt: timestamptz("created_at").notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("sessions_token_hash_key").on(table.tokenHash),
-    index("sessions_user_id_idx").on(table.userId),
-  ],
-);
+/** A user's random token, stored only as a SHA-256 hash so a DB leak cannot be replayed. */
+const tokenColumns = () => ({
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+});
 
-/** Single-use email confirmation tokens, stored hashed like sessions. */
+export const sessions = pgTable("sessions", tokenColumns(), (table) => [
+  uniqueIndex("sessions_token_hash_key").on(table.tokenHash),
+  index("sessions_user_id_idx").on(table.userId),
+]);
+
+/** Single-use email confirmation tokens. */
 export const emailVerificationTokens = pgTable(
   "email_verification_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull(),
-    expiresAt: timestamptz("expires_at").notNull(),
-    createdAt: timestamptz("created_at").notNull().defaultNow(),
-  },
+  tokenColumns(),
   (table) => [
     uniqueIndex("email_verification_tokens_hash_key").on(table.tokenHash),
     index("email_verification_tokens_user_id_idx").on(table.userId),
   ],
 );
 
-/** Single-use "forgot password" tokens, stored hashed like sessions. One outstanding per user. */
-export const passwordResetTokens = pgTable(
-  "password_reset_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull(),
-    expiresAt: timestamptz("expires_at").notNull(),
-    createdAt: timestamptz("created_at").notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("password_reset_tokens_hash_key").on(table.tokenHash),
-    index("password_reset_tokens_user_id_idx").on(table.userId),
-  ],
-);
+/** Single-use "forgot password" tokens. One outstanding per user. */
+export const passwordResetTokens = pgTable("password_reset_tokens", tokenColumns(), (table) => [
+  uniqueIndex("password_reset_tokens_hash_key").on(table.tokenHash),
+  index("password_reset_tokens_user_id_idx").on(table.userId),
+]);
 
 /** Fixed-window counters used to throttle login, registration and resend requests. */
 export const rateLimits = pgTable("rate_limits", {

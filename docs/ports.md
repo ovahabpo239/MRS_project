@@ -27,6 +27,8 @@ Host ports for the local stack, as defined in [docker-compose.yml](../docker-com
 | 5016 | 1025 | Mailpit | - | SMTP |
 | 5017 | 8025 | Mailpit | [localhost:5017](http://localhost:5017) | Web UI |
 | 5018 | 5432 | web-db (Postgres) | - | Web app accounts and sessions |
+| 5019 | 9000 | Lake (RustFS, S3 API) | - | `--profile lake` / `make lake-up`; credentials `resonance` / `resonance-local-only` |
+| 5020 | 9001 | Lake console | [localhost:5020](http://localhost:5020) | Browse bronze, silver and gold; same credentials |
 
 Rows without a link are not HTTP UIs (databases, SMTP, gRPC) or only accept POST.
 

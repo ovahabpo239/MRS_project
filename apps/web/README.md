@@ -15,7 +15,7 @@ no-attribution licence.
 # Everything in Docker (app + Postgres + Mailpit), from the repository root
 make web-up            # http://localhost:5003, emails at http://localhost:5017
 
-# Or develop on the host (Node 22, see .nvmrc); starts only Postgres and Mailpit in Docker
+# Or develop on the host (Node 24, see .nvmrc); starts only Postgres and Mailpit in Docker
 cd apps/web && cp .env.example .env.local && npm ci
 make web-migrate       # apply SQL migrations (the Docker app does this itself on startup)
 make web-dev           # http://localhost:5003 with hot reload

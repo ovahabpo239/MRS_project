@@ -1,14 +1,9 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import base from "./vitest.config";
 
 // Integration tests run against a real Postgres (DATABASE_URL), never a mock.
 export default defineConfig({
-  resolve: {
-    alias: {
-      "@tests": fileURLToPath(new URL("./tests", import.meta.url)),
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-    },
-  },
+  ...base,
   test: {
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
